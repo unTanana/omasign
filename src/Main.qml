@@ -247,23 +247,16 @@ ApplicationWindow {
         objectName: "pages"
         anchors.fill: parent
         model: backend.pageCount
-        interactive: false
         clip: true
         topMargin: win.pageGap
         bottomMargin: win.pageGap
         cacheBuffer: height
+        boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar {}
 
         function scrollBy(delta) {
             var maxY = Math.max(-topMargin, contentHeight - height + bottomMargin);
             contentY = Math.max(-topMargin, Math.min(maxY, contentY + delta));
-        }
-
-        WheelHandler {
-            onWheel: function(event) {
-                var delta = event.pixelDelta.y !== 0 ? event.pixelDelta.y : event.angleDelta.y / 120 * win.scaledSize(90);
-                pages.scrollBy(-delta);
-            }
         }
 
         delegate: Item {

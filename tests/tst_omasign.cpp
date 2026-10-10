@@ -1,6 +1,8 @@
 #include <QtTest>
 
 #include <QElapsedTimer>
+#include <QPointingDevice>
+#include <QWheelEvent>
 #include <QJSValue>
 #include <QPageSize>
 #include <QQmlApplicationEngine>
@@ -26,6 +28,7 @@ private slots:
     void addSignatureKeysOutPaper();
     void uiPlacesTextAndSignatureThenSaves();
     void uiStaysLazyOnLongDocument();
+    void uiScrollsWithWheel();
 };
 
 static void makePdf(const QString &path) {
@@ -339,6 +342,45 @@ void TestOmasign::uiStaysLazyOnLongDocument() {
     QTest::qWait(300);
     QVERIFY2(delegateCount() < 12, qPrintable(QString::number(delegateCount())));
     QVERIFY(pages->property("contentY").toReal() > 1000);
+}
+
+void TestOmasign::uiScrollsWithWheel() {
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString pdf = dir.filePath(QStringLiteral("doc.pdf"));
+    makePdf(pdf);
+
+    Backend backend;
+    QQmlApplicationEngine engine;
+    engine.rootContext()->setContextProperty(QStringLiteral("backend"), &backend);
+    engine.addImageProvider(QStringLiteral("pdf"), new PageImageProvider(&backend));
+    engine.load(QUrl(QStringLiteral("qrc:/Main.qml")));
+    auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst());
+    QVERIFY(window && QTest::qWaitForWindowExposed(window));
+    QVERIFY(backend.open(QUrl::fromLocalFile(pdf)));
+    QQuickItem *pages = findItem(window, "pages");
+    QVERIFY(pages);
+    QTRY_COMPARE(pages->property("count").toInt(), 1);
+    QTest::qWait(100);
+    const qreal startY = pages->property("contentY").toReal();
+    const QPointF pos(window->width() / 2, window->height() / 2);
+
+    // Mouse wheel: one notch down.
+    QWheelEvent mouseWheel(pos, window->mapToGlobal(pos.toPoint()), QPoint(), QPoint(0, -120),
+                           Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+    QCoreApplication::sendEvent(window, &mouseWheel);
+    QTRY_VERIFY2(pages->property("contentY").toReal() > startY + 10,
+                 qPrintable(QString::number(pages->property("contentY").toReal())));
+
+    // Touchpad: pixel deltas, device type TouchPad.
+    const qreal midY = pages->property("contentY").toReal();
+    QPointingDevice touchpad(QStringLiteral("test touchpad"), 2, QInputDevice::DeviceType::TouchPad,
+                             QPointingDevice::PointerType::Finger, QInputDevice::Capability::Scroll, 1, 1);
+    QWheelEvent padWheel(pos, window->mapToGlobal(pos.toPoint()), QPoint(0, -40), QPoint(0, -40),
+                         Qt::NoButton, Qt::NoModifier, Qt::ScrollUpdate, false, Qt::MouseEventNotSynthesized, &touchpad);
+    QCoreApplication::sendEvent(window, &padWheel);
+    QTRY_VERIFY2(pages->property("contentY").toReal() > midY + 10,
+                 qPrintable(QString::number(pages->property("contentY").toReal())));
 }
 
 QTEST_MAIN(TestOmasign)
