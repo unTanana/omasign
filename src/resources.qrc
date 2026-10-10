@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="Main.qml">Main.qml</file>
+        <file alias="PlacedItem.qml">PlacedItem.qml</file>
+    </qresource>
+</RCC>

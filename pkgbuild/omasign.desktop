@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Omasign
+GenericName=PDF Signer
+Comment=Dead-simple PDF viewer and signer
+Exec=omasign %f
+Icon=omasign
+Terminal=false
+Categories=Office;Viewer;
+MimeType=application/pdf;
+Keywords=pdf;sign;signature;viewer;
+StartupWMClass=omasign
